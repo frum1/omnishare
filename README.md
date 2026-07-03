@@ -24,3 +24,5 @@ prints its generated password to the console — grab it from there and change
 it after logging in.
 
 Open `http://localhost:8000/docs` for interactive API docs.
+
+Copyleft frum1 :)
