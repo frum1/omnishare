@@ -3,10 +3,10 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.security import create_access_token, verify_password
+from app.core.security import create_access_token, get_current_user, hash_password, verify_password
 from app.db.models import User
 from app.db.session import get_db
-from app.schemas import Token
+from app.schemas import ChangePasswordIn, Token
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -26,3 +26,19 @@ async def login(
         )
     token = create_access_token(subject=user.id)
     return Token(access_token=token)
+
+
+@router.post("/change-password", status_code=status.HTTP_204_NO_CONTENT)
+async def change_password(
+    payload: ChangePasswordIn,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """The one endpoint (besides download/health) reachable while
+    must_change_password is set - see get_current_active_user."""
+    if not payload.new_password:
+        raise HTTPException(status_code=400, detail="new_password cannot be empty")
+
+    current_user.hashed_password = hash_password(payload.new_password)
+    current_user.must_change_password = False
+    await db.commit()

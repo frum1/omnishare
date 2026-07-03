@@ -53,7 +53,21 @@ async def get_current_user(
     return user
 
 
-async def get_current_admin(user: User = Depends(get_current_user)) -> User:
+async def get_current_active_user(user: User = Depends(get_current_user)) -> User:
+    """Blocks access until a pending forced password change is completed.
+
+    Used everywhere except /auth/change-password (and the public download
+    and health endpoints, which don't depend on auth at all).
+    """
+    if user.must_change_password:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Password change required before performing this action",
+        )
+    return user
+
+
+async def get_current_admin(user: User = Depends(get_current_active_user)) -> User:
     if not user.is_admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Administrator privileges required")
     return user

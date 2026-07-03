@@ -20,7 +20,17 @@ class UserOut(BaseModel):
     id: str
     username: str
     is_admin: bool
+    must_change_password: bool
     created_at: datetime
+
+
+class PasswordResetOut(BaseModel):
+    username: str
+    temporary_password: str
+
+
+class ChangePasswordIn(BaseModel):
+    new_password: str
 
 
 class FileOut(BaseModel):

@@ -15,11 +15,12 @@ uv sync
 cp .env.example .env
 # edit .env: PUBLIC_BASE_URL, SECRET_KEY (see inline comments)
 
-# create the first administrator
-uv run python -m scripts.create_admin
-
 # run the server
 uv run main.py
 ```
+
+On first boot the server creates a root `admin` account automatically and
+prints its generated password to the console — grab it from there and change
+it after logging in.
 
 Open `http://localhost:8000/docs` for interactive API docs.

@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.network import build_share_urls
-from app.core.security import get_current_user
+from app.core.security import get_current_active_user
 from app.core.storage import build_storage_path, cleanup_empty_parents
 from app.db.models import FileShare, User
 from app.db.session import get_db
@@ -68,7 +68,7 @@ async def upload_file(
     max_downloads: int | None = Form(None),
     caption: str | None = Form(None),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_active_user),
 ):
     file_id = uuid.uuid4().hex
     created_at = datetime.utcnow()
@@ -117,7 +117,7 @@ async def upload_file(
 @router.get("")
 async def list_files(
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_active_user),
 ):
     if current_user.is_admin:
         result = await db.execute(select(FileShare).order_by(FileShare.owner_id, FileShare.created_at.desc()))
@@ -137,7 +137,7 @@ async def update_file_caption(
     file_id: str,
     payload: FileCaptionUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_active_user),
 ):
     result = await db.execute(select(FileShare).where(FileShare.id == file_id))
     file_share = result.scalar_one_or_none()
@@ -156,7 +156,7 @@ async def update_file_caption(
 async def delete_file(
     file_id: str,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_active_user),
 ):
     result = await db.execute(select(FileShare).where(FileShare.id == file_id))
     file_share = result.scalar_one_or_none()

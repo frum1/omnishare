@@ -1,5 +1,6 @@
 import asyncio
 import contextlib
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -7,7 +8,10 @@ from fastapi import FastAPI
 from app.core.config import settings
 from app.db.session import init_db
 from app.routers import auth, download, files, settings as settings_router, users
+from app.services.bootstrap import ensure_root_admin
 from app.services.cleanup import purge_expired_files
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
 
 async def _cleanup_loop():
@@ -21,6 +25,7 @@ async def _cleanup_loop():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
+    await ensure_root_admin()
     task = asyncio.create_task(_cleanup_loop())
     yield
     task.cancel()
