@@ -12,7 +12,7 @@ from app.core.storage import cleanup_empty_parents
 from app.db.models import FileShare
 from app.db.session import async_session_maker, get_db
 
-logger = logging.getLogger("hshare.download")
+logger = logging.getLogger("omnishare.download")
 
 router = APIRouter(tags=["download"])
 

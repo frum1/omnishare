@@ -8,7 +8,7 @@ from app.core.storage import cleanup_empty_parents
 from app.db.models import FileShare
 from app.db.session import async_session_maker
 
-logger = logging.getLogger("hshare.cleanup")
+logger = logging.getLogger("omnishare.cleanup")
 
 
 async def purge_expired_files() -> int:

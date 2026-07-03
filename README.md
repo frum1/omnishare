@@ -1,4 +1,4 @@
-# hshare
+# OmniShare
 
 Self-hosted file sharing service. Upload a file, get a link back — with a
 twist: every upload returns both a public link (your domain) and a local

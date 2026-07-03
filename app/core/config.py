@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 60 * 24
     jwt_algorithm: str = "HS256"
 
-    database_url: str = "sqlite+aiosqlite:///./data/hshare.db"
+    database_url: str = "sqlite+aiosqlite:///./data/omnishare.db"
     storage_dir: str = "./storage"
 
     max_file_size_mb: int = 1024
