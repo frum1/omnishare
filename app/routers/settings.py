@@ -1,0 +1,49 @@
+from fastapi import APIRouter, Depends, HTTPException
+
+from app.config import settings
+from app.env_file import update_env_file
+from app.models import User
+from app.schemas import NetworkSettingsOut, NetworkSettingsUpdate
+from app.security import get_current_admin
+
+router = APIRouter(prefix="/admin/settings", tags=["settings"])
+
+
+def _current() -> NetworkSettingsOut:
+    return NetworkSettingsOut(
+        public_base_url=settings.public_base_url,
+        local_base_url=settings.local_base_url,
+        local_port=settings.local_port,
+        max_file_size_mb=settings.max_file_size_mb,
+        cleanup_interval_minutes=settings.cleanup_interval_minutes,
+    )
+
+
+@router.get("", response_model=NetworkSettingsOut)
+async def get_settings(_: User = Depends(get_current_admin)):
+    return _current()
+
+
+@router.post("", response_model=NetworkSettingsOut)
+async def update_settings(
+    payload: NetworkSettingsUpdate,
+    _: User = Depends(get_current_admin),
+):
+    updates = payload.model_dump(exclude_unset=True, exclude_none=True)
+
+    if "public_base_url" in updates and not updates["public_base_url"].strip():
+        raise HTTPException(status_code=400, detail="public_base_url не может быть пустым")
+    if "local_port" in updates and not (1 <= updates["local_port"] <= 65535):
+        raise HTTPException(status_code=400, detail="local_port должен быть в диапазоне 1-65535")
+    if "max_file_size_mb" in updates and updates["max_file_size_mb"] <= 0:
+        raise HTTPException(status_code=400, detail="max_file_size_mb должен быть положительным")
+    if "cleanup_interval_minutes" in updates and updates["cleanup_interval_minutes"] < 1:
+        raise HTTPException(status_code=400, detail="cleanup_interval_minutes должен быть не меньше 1")
+
+    for field, value in updates.items():
+        setattr(settings, field, value)
+
+    if updates:
+        update_env_file({field.upper(): str(value) for field, value in updates.items()})
+
+    return _current()
