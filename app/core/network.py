@@ -1,15 +1,9 @@
 import socket
 
-from app.config import settings
+from app.core.config import settings
 
 
 def detect_local_ip() -> str:
-    """Определяет IP локального интерфейса, через который сервер выходит наружу.
-
-    Сокет не отправляет ни одного пакета - connect() на UDP лишь выбирает
-    маршрут/интерфейс ядром ОС, поэтому это работает даже без интернета,
-    пока есть хоть какая-то сеть (например 192.168.x.x).
-    """
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
         s.connect(("10.255.255.255", 1))

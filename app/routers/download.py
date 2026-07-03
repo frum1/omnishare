@@ -6,8 +6,8 @@ from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database import get_db
-from app.models import FileShare
+from app.db.models import FileShare
+from app.db.session import get_db
 
 router = APIRouter(tags=["download"])
 

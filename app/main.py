@@ -4,10 +4,10 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from app.cleanup import purge_expired_files
-from app.config import settings
-from app.database import init_db
+from app.core.config import settings
+from app.db.session import init_db
 from app.routers import auth, download, files, settings as settings_router, users
+from app.services.cleanup import purge_expired_files
 
 
 async def _cleanup_loop():

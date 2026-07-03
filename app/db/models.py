@@ -4,7 +4,7 @@ from datetime import datetime
 from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.database import Base
+from app.db.session import Base
 
 
 def _uuid() -> str:
@@ -12,8 +12,6 @@ def _uuid() -> str:
 
 
 def _utcnow() -> datetime:
-    # SQLite не сохраняет tzinfo при round-trip, поэтому здесь и во всех
-    # сравнениях с этими полями используется наивный UTC-datetime.
     return datetime.utcnow()
 
 

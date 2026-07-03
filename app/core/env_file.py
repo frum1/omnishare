@@ -4,8 +4,6 @@ ENV_PATH = Path(".env")
 
 
 def update_env_file(updates: dict[str, str], env_path: Path = ENV_PATH) -> None:
-    """Точечно обновляет KEY=value строки в .env, сохраняя остальное содержимое
-    (комментарии, порядок, недостающие ключи допишет в конец) и пишет атомарно."""
     remaining = dict(updates)
     lines = env_path.read_text().splitlines() if env_path.exists() else []
 

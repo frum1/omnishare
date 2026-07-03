@@ -4,14 +4,13 @@ from pathlib import Path
 
 from sqlalchemy import select
 
-from app.database import async_session_maker
-from app.models import FileShare
+from app.db.models import FileShare
+from app.db.session import async_session_maker
 
 logger = logging.getLogger("hshare.cleanup")
 
 
 async def purge_expired_files() -> int:
-    """Удаляет истёкшие по TTL файлы с диска и из БД. Возвращает число удалённых."""
     now = datetime.utcnow()
     removed = 0
     async with async_session_maker() as session:

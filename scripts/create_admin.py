@@ -8,9 +8,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from sqlalchemy import select
 
-from app.database import async_session_maker, init_db
-from app.models import User
-from app.security import hash_password
+from app.core.security import hash_password
+from app.db.models import User
+from app.db.session import async_session_maker, init_db
 
 
 async def main() -> None:

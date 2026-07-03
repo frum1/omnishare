@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
 
-from app.config import settings
-from app.env_file import update_env_file
-from app.models import User
+from app.core.config import settings
+from app.core.env_file import update_env_file
+from app.core.security import get_current_admin
+from app.db.models import User
 from app.schemas import NetworkSettingsOut, NetworkSettingsUpdate
-from app.security import get_current_admin
 
 router = APIRouter(prefix="/admin/settings", tags=["settings"])
 

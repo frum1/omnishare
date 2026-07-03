@@ -7,12 +7,12 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, s
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config import settings
-from app.database import get_db
-from app.models import FileShare, User
-from app.network import build_share_urls
+from app.core.config import settings
+from app.core.network import build_share_urls
+from app.core.security import get_current_user
+from app.db.models import FileShare, User
+from app.db.session import get_db
 from app.schemas import FileCaptionUpdate, FileOut
-from app.security import get_current_user
 
 router = APIRouter(prefix="/api/files", tags=["files"])
 
@@ -115,8 +115,6 @@ async def list_files(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Админ видит файлы всех пользователей, сгруппированные по id владельца.
-    Обычный пользователь видит только свои файлы плоским списком."""
     if current_user.is_admin:
         result = await db.execute(select(FileShare).order_by(FileShare.owner_id, FileShare.created_at.desc()))
         grouped: dict[str, list[FileOut]] = {}
