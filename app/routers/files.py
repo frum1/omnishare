@@ -49,7 +49,7 @@ async def _save_upload(upload: UploadFile, dest: Path) -> int:
                 if total > max_size:
                     raise HTTPException(
                         status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-                        detail=f"Файл превышает максимальный размер {settings.max_file_size_mb} МБ",
+                        detail=f"File exceeds the maximum size of {settings.max_file_size_mb} MB",
                     )
                 await out.write(chunk)
     except HTTPException:
@@ -76,20 +76,20 @@ async def upload_file(
     dest.parent.mkdir(parents=True, exist_ok=True)
     size_bytes = await _save_upload(file, dest)
 
-    # 0 или None означает "бесконечно" - удобно для форм, где поле всегда
-    # присутствует и по умолчанию равно 0.
+    # 0 or None means "infinite" - convenient for forms where the field is
+    # always present and defaults to 0.
     expires_at = None
     if ttl_seconds is not None:
         if ttl_seconds < 0:
             dest.unlink(missing_ok=True)
-            raise HTTPException(status_code=400, detail="ttl_seconds не может быть отрицательным")
+            raise HTTPException(status_code=400, detail="ttl_seconds cannot be negative")
         if ttl_seconds > 0:
             expires_at = datetime.utcnow() + timedelta(seconds=ttl_seconds)
 
     if max_downloads is not None:
         if max_downloads < 0:
             dest.unlink(missing_ok=True)
-            raise HTTPException(status_code=400, detail="max_downloads не может быть отрицательным")
+            raise HTTPException(status_code=400, detail="max_downloads cannot be negative")
         if max_downloads == 0:
             max_downloads = None
 
@@ -142,9 +142,9 @@ async def update_file_caption(
     result = await db.execute(select(FileShare).where(FileShare.id == file_id))
     file_share = result.scalar_one_or_none()
     if file_share is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Файл не найден")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found")
     if file_share.owner_id != current_user.id and not current_user.is_admin:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Нет доступа к этому файлу")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You don't have access to this file")
 
     file_share.caption = payload.caption.strip() if payload.caption and payload.caption.strip() else None
     await db.commit()
@@ -161,9 +161,9 @@ async def delete_file(
     result = await db.execute(select(FileShare).where(FileShare.id == file_id))
     file_share = result.scalar_one_or_none()
     if file_share is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Файл не найден")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found")
     if file_share.owner_id != current_user.id and not current_user.is_admin:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Нет доступа к этому файлу")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You don't have access to this file")
 
     stored_path = Path(file_share.stored_path)
     stored_path.unlink(missing_ok=True)

@@ -5,11 +5,11 @@ from app.core.config import settings
 
 
 def build_storage_path(file_id: str, created_at: datetime) -> Path:
-    """storage/<год>/<месяц>/<день>/<2 символа id>/<file_id>.
+    """storage/<year>/<month>/<day>/<2 chars of id>/<file_id>.
 
-    Дата ограничивает размер директории естественным темпом загрузок, а
-    хэш-шард (первые байты id - у uuid4 они равномерно случайны) защищает от
-    раздутия даже при большом числе загрузок за один день.
+    The date bounds directory size at the natural upload rate, while the
+    hash shard (the first bytes of the id - uniformly random for uuid4)
+    guards against bloat even under heavy upload volume on a single day.
     """
     date_dir = created_at.strftime("%Y/%m/%d")
     shard = file_id[:2]
@@ -17,8 +17,8 @@ def build_storage_path(file_id: str, created_at: datetime) -> Path:
 
 
 def cleanup_empty_parents(path: Path) -> None:
-    """Убирает опустевшие после удаления файла родительские директории
-    (шард/день/месяц/год), не трогая сам storage_path."""
+    """Removes parent directories (shard/day/month/year) left empty after a
+    file is deleted, without touching storage_path itself."""
     root = settings.storage_path.resolve()
     parent = path.resolve().parent
     while parent != root and root in parent.parents:

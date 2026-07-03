@@ -32,13 +32,13 @@ async def update_settings(
     updates = payload.model_dump(exclude_unset=True, exclude_none=True)
 
     if "public_base_url" in updates and not updates["public_base_url"].strip():
-        raise HTTPException(status_code=400, detail="public_base_url не может быть пустым")
+        raise HTTPException(status_code=400, detail="public_base_url cannot be empty")
     if "local_port" in updates and not (1 <= updates["local_port"] <= 65535):
-        raise HTTPException(status_code=400, detail="local_port должен быть в диапазоне 1-65535")
+        raise HTTPException(status_code=400, detail="local_port must be in range 1-65535")
     if "max_file_size_mb" in updates and updates["max_file_size_mb"] <= 0:
-        raise HTTPException(status_code=400, detail="max_file_size_mb должен быть положительным")
+        raise HTTPException(status_code=400, detail="max_file_size_mb must be positive")
     if "cleanup_interval_minutes" in updates and updates["cleanup_interval_minutes"] < 1:
-        raise HTTPException(status_code=400, detail="cleanup_interval_minutes должен быть не меньше 1")
+        raise HTTPException(status_code=400, detail="cleanup_interval_minutes must be at least 1")
 
     for field, value in updates.items():
         setattr(settings, field, value)

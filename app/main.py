@@ -12,8 +12,8 @@ from app.services.cleanup import purge_expired_files
 
 async def _cleanup_loop():
     while True:
-        # интервал читается заново на каждой итерации, чтобы изменения через
-        # POST /admin/settings подхватывались без перезапуска сервиса
+        # interval is re-read every iteration so changes made via
+        # POST /admin/settings take effect without restarting the service
         await asyncio.sleep(settings.cleanup_interval_minutes * 60)
         await purge_expired_files()
 

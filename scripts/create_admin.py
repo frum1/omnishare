@@ -1,4 +1,4 @@
-"""Создаёт первого администратора. Запуск: python -m scripts.create_admin"""
+"""Creates the first administrator. Run: python -m scripts.create_admin"""
 import asyncio
 import getpass
 import sys
@@ -18,28 +18,28 @@ async def main() -> None:
 
     username = input("Username: ").strip()
     if not username:
-        print("Username не может быть пустым")
+        print("Username cannot be empty")
         return
 
     password = getpass.getpass("Password: ")
     password_confirm = getpass.getpass("Confirm password: ")
     if password != password_confirm:
-        print("Пароли не совпадают")
+        print("Passwords do not match")
         return
     if not password:
-        print("Пароль не может быть пустым")
+        print("Password cannot be empty")
         return
 
     async with async_session_maker() as session:
         existing = await session.execute(select(User).where(User.username == username))
         if existing.scalar_one_or_none() is not None:
-            print(f"Пользователь '{username}' уже существует")
+            print(f"User '{username}' already exists")
             return
 
         user = User(username=username, hashed_password=hash_password(password), is_admin=True)
         session.add(user)
         await session.commit()
-        print(f"Администратор '{username}' создан")
+        print(f"Administrator '{username}' created")
 
 
 if __name__ == "__main__":

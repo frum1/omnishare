@@ -1,82 +1,25 @@
 # hshare
 
-Self-hosted сервис для шаринга файлов по ссылке. При загрузке файла API отдаёт
-сразу две ссылки на скачивание: публичную (по домену) и локальную (по IP
-сервера в домашней сети) — удобно, когда домашний сервер недоступен по домену
-из своей же локальной сети (NAT hairpinning), либо просто когда получатель
-находится рядом, в той же сети.
+Self-hosted file sharing service. Upload a file, get a link back — with a
+twist: every upload returns both a public link (your domain) and a local
+link (your server's LAN IP), so sharing still works inside your home network
+even when the public domain isn't reachable from it.
 
-## Быстрый старт
+Built with FastAPI, SQLAlchemy (async) + SQLite, and JWT auth.
+
+## Quick start
 
 ```bash
 uv sync
 
 cp .env.example .env
-# отредактируйте .env: PUBLIC_BASE_URL, SECRET_KEY (см. подсказку в файле)
+# edit .env: PUBLIC_BASE_URL, SECRET_KEY (see inline comments)
 
-# создать первого администратора
+# create the first administrator
 uv run python -m scripts.create_admin
 
-# запуск (слушает 0.0.0.0:LOCAL_PORT, доступен и из LAN, и снаружи через reverse proxy)
+# run the server
 uv run main.py
-# эквивалентно: uv run uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
-Открыть `http://localhost:8000/docs` для интерактивной документации API.
-
-## Права доступа
-
-- **Неавторизованные** — только `GET /f/{file_id}` (скачивание) и `GET /health`.
-- **Обычный пользователь** (`is_admin=false`) — всё, что не является
-  админской привилегией: загрузка/просмотр/удаление **своих** файлов.
-- **Админ** (`is_admin=true`) — всё то же самое плюс админские привилегии:
-  создание пользователей, просмотр файлов всех пользователей, изменение
-  настроек, удаление **чужих** файлов.
-
-## API
-
-- `POST /auth/login` — form (`username`, `password`) → JWT access token
-- `POST /admin/users` — (admin) создать пользователя
-- `GET /admin/users` — (admin) список пользователей
-- `POST /api/files` — (любой авторизованный) multipart upload: `file`,
-  опционально `ttl_seconds`, `max_downloads` (`0` или не указано = бессрочно/без
-  лимита), `caption` (произвольный текст-подпись) → объект файла с
-  `public_url`/`local_url`. Владельцем становится вызвавший пользователь
-- `GET /api/files` — список файлов (каждый объект включает `caption`,
-  `public_url`, `local_url`): админ получает `{"id_пользователя": [файлы]}` по
-  всем пользователям, обычный пользователь — плоский список только своих файлов
-- `PATCH /api/files/{file_id}` — изменить/очистить (`{"caption": null}`)
-  подпись файла; владелец или админ
-- `DELETE /api/files/{file_id}` — владелец удаляет свой файл; админ может
-  удалить любой
-- `GET /f/{file_id}` — публичная ссылка на скачивание (без авторизации),
-  поддерживает Range-запросы, учитывает TTL и лимит скачиваний
-- `GET /admin/settings` — (admin) текущие сетевые настройки/лимиты
-- `POST /admin/settings` — (admin) частично обновить настройки (любое
-  подмножество полей); изменения применяются сразу и перезаписываются в `.env`,
-  переживая перезапуск. Доступные поля: `public_base_url`, `local_base_url`,
-  `local_port`, `max_file_size_mb`, `cleanup_interval_minutes`
-
-## Как работает вторая (локальная) ссылка
-
-`LOCAL_BASE_URL` в `.env` можно задать явно (например
-`http://192.168.1.50:8000`). Если оставить пустым, сервис определяет IP
-локального интерфейса автоматически (через UDP-сокет, без реальной отправки
-пакетов) и подставляет порт `LOCAL_PORT`.
-
-## Продакшн-заметки
-
-- Публичный доступ обычно нужен через reverse proxy (nginx/Caddy) с HTTPS и
-  проброс порта на роутере — сам сервис TLS не терминирует.
-- `MAX_FILE_SIZE_MB` и `UPLOAD_CHUNK_SIZE_KB` управляют потоковой загрузкой:
-  файл читается и пишется на диск чанками, не целиком в памяти.
-- Фоновая задача каждые `CLEANUP_INTERVAL_MINUTES` минут удаляет с диска и из
-  БД файлы с истёкшим TTL. Отдельно то же самое лениво проверяется при каждом
-  скачивании.
-- Файлы на диске раскладываются как
-  `storage/<год>/<месяц>/<день>/<2 символа id>/<file_id>` — дата ограничивает
-  размер директории естественным темпом загрузок, хэш-шард защищает от
-  раздутия при большом числе файлов за один день. При удалении опустевшие
-  родительские директории подчищаются автоматически. Путь к каждому файлу
-  хранится в БД, поэтому смена схемы раскладки не требует миграции старых
-  записей.
+Open `http://localhost:8000/docs` for interactive API docs.

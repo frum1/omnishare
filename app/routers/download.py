@@ -18,7 +18,7 @@ async def download_file(file_id: str, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(FileShare).where(FileShare.id == file_id))
     file_share = result.scalar_one_or_none()
     if file_share is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Файл не найден")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found")
 
     now = datetime.utcnow()
     expired_by_ttl = file_share.expires_at is not None and file_share.expires_at < now
@@ -31,11 +31,11 @@ async def download_file(file_id: str, db: AsyncSession = Depends(get_db)):
         cleanup_empty_parents(stored_path)
         await db.delete(file_share)
         await db.commit()
-        raise HTTPException(status_code=status.HTTP_410_GONE, detail="Срок действия ссылки истёк")
+        raise HTTPException(status_code=status.HTTP_410_GONE, detail="This link has expired")
 
     path = Path(file_share.stored_path)
     if not path.exists():
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Файл не найден")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found")
 
     file_share.download_count += 1
     await db.commit()

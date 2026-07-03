@@ -21,7 +21,7 @@ async def login(
     if user is None or not verify_password(form_data.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Неверный логин или пароль",
+            detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
     token = create_access_token(subject=user.id)
