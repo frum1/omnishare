@@ -4,6 +4,7 @@ from pathlib import Path
 
 from sqlalchemy import select
 
+from app.core.storage import cleanup_empty_parents
 from app.db.models import FileShare
 from app.db.session import async_session_maker
 
@@ -17,7 +18,9 @@ async def purge_expired_files() -> int:
         result = await session.execute(select(FileShare).where(FileShare.expires_at.is_not(None), FileShare.expires_at < now))
         expired = result.scalars().all()
         for file_share in expired:
-            Path(file_share.stored_path).unlink(missing_ok=True)
+            stored_path = Path(file_share.stored_path)
+            stored_path.unlink(missing_ok=True)
+            cleanup_empty_parents(stored_path)
             await session.delete(file_share)
             removed += 1
         if removed:

@@ -6,6 +6,7 @@ from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.storage import cleanup_empty_parents
 from app.db.models import FileShare
 from app.db.session import get_db
 
@@ -25,7 +26,9 @@ async def download_file(file_id: str, db: AsyncSession = Depends(get_db)):
         file_share.max_downloads is not None and file_share.download_count >= file_share.max_downloads
     )
     if expired_by_ttl or expired_by_limit:
-        Path(file_share.stored_path).unlink(missing_ok=True)
+        stored_path = Path(file_share.stored_path)
+        stored_path.unlink(missing_ok=True)
+        cleanup_empty_parents(stored_path)
         await db.delete(file_share)
         await db.commit()
         raise HTTPException(status_code=status.HTTP_410_GONE, detail="Срок действия ссылки истёк")

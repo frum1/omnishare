@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.core.network import build_share_urls
 from app.core.security import get_current_user
+from app.core.storage import build_storage_path, cleanup_empty_parents
 from app.db.models import FileShare, User
 from app.db.session import get_db
 from app.schemas import FileCaptionUpdate, FileOut
@@ -70,7 +71,9 @@ async def upload_file(
     current_user: User = Depends(get_current_user),
 ):
     file_id = uuid.uuid4().hex
-    dest = settings.storage_path / file_id
+    created_at = datetime.utcnow()
+    dest = build_storage_path(file_id, created_at)
+    dest.parent.mkdir(parents=True, exist_ok=True)
     size_bytes = await _save_upload(file, dest)
 
     # 0 или None означает "бесконечно" - удобно для форм, где поле всегда
@@ -100,6 +103,7 @@ async def upload_file(
         content_type=file.content_type or "application/octet-stream",
         size_bytes=size_bytes,
         caption=caption,
+        created_at=created_at,
         expires_at=expires_at,
         max_downloads=max_downloads,
     )
@@ -161,6 +165,8 @@ async def delete_file(
     if file_share.owner_id != current_user.id and not current_user.is_admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Нет доступа к этому файлу")
 
-    Path(file_share.stored_path).unlink(missing_ok=True)
+    stored_path = Path(file_share.stored_path)
+    stored_path.unlink(missing_ok=True)
+    cleanup_empty_parents(stored_path)
     await db.delete(file_share)
     await db.commit()
