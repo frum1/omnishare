@@ -1,3 +1,4 @@
+import shutil
 import uuid
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -9,11 +10,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.network import build_share_urls
-from app.core.security import get_current_active_user
+from app.core.security import get_current_active_user, get_current_admin
 from app.core.storage import build_storage_path, cleanup_empty_parents
 from app.db.models import FileShare, User
 from app.db.session import get_db
-from app.schemas import FileCaptionUpdate, FileOut
+from app.schemas import DiskUsageOut, FileCaptionUpdate, FileOut, UserUsageOut
+from app.services.quota import get_usage_bytes
 
 router = APIRouter(prefix="/api/files", tags=["files"])
 
@@ -35,7 +37,7 @@ def _file_out(file_share: FileShare) -> FileOut:
     )
 
 
-async def _save_upload(upload: UploadFile, dest: Path) -> int:
+async def _save_upload(upload: UploadFile, dest: Path, quota_remaining: int | None) -> int:
     total = 0
     max_size = settings.max_file_size_bytes
     chunk_size = settings.upload_chunk_size_bytes
@@ -50,6 +52,11 @@ async def _save_upload(upload: UploadFile, dest: Path) -> int:
                     raise HTTPException(
                         status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
                         detail=f"File exceeds the maximum size of {settings.max_file_size_mb} MB",
+                    )
+                if quota_remaining is not None and total > quota_remaining:
+                    raise HTTPException(
+                        status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                        detail="Upload exceeds your storage quota",
                     )
                 await out.write(chunk)
     except HTTPException:
@@ -70,11 +77,21 @@ async def upload_file(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
+    quota_remaining = None
+    if current_user.quota_bytes is not None:
+        used_bytes = await get_usage_bytes(db, current_user.id)
+        quota_remaining = current_user.quota_bytes - used_bytes
+        if quota_remaining <= 0:
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                detail="Storage quota exceeded",
+            )
+
     file_id = uuid.uuid4().hex
     created_at = datetime.utcnow()
     dest = build_storage_path(file_id, created_at)
     dest.parent.mkdir(parents=True, exist_ok=True)
-    size_bytes = await _save_upload(file, dest)
+    size_bytes = await _save_upload(file, dest, quota_remaining)
 
     # 0 or None means "infinite" - convenient for forms where the field is
     # always present and defaults to 0.
@@ -114,6 +131,23 @@ async def upload_file(
     return _file_out(file_share)
 
 
+@router.get("/disk-usage", response_model=DiskUsageOut)
+async def get_disk_usage(
+    _: User = Depends(get_current_admin),
+):
+    total, used, free = shutil.disk_usage(settings.storage_path)
+    return DiskUsageOut(total_bytes=total, used_bytes=used, free_bytes=free)
+
+
+@router.get("/usage", response_model=UserUsageOut)
+async def get_my_usage(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    used_bytes = await get_usage_bytes(db, current_user.id)
+    return UserUsageOut(used_bytes=used_bytes, quota_bytes=current_user.quota_bytes)
+
+
 @router.get("")
 async def list_files(
     db: AsyncSession = Depends(get_db),
@@ -130,6 +164,19 @@ async def list_files(
         select(FileShare).where(FileShare.owner_id == current_user.id).order_by(FileShare.created_at.desc())
     )
     return [_file_out(f) for f in result.scalars().all()]
+
+
+@router.get("/{file_id}/info", response_model=FileOut)
+async def get_file_info(
+    file_id: str,
+    db: AsyncSession = Depends(get_db)
+):
+    result = await db.execute(select(FileShare).where(FileShare.id == file_id))
+    file_share = result.scalar_one_or_none()
+    if file_share is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found")
+
+    return _file_out(file_share)
 
 
 @router.patch("/{file_id}", response_model=FileOut)

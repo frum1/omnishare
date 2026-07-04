@@ -6,7 +6,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.security import create_access_token, get_current_user, hash_password, verify_password
 from app.db.models import User
 from app.db.session import get_db
-from app.schemas import ChangePasswordIn, Token
+from app.schemas import ChangePasswordIn, Token, UserOut
+from app.services.quota import build_user_out_with_usage
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -26,6 +27,14 @@ async def login(
         )
     token = create_access_token(subject=user.id)
     return Token(access_token=token)
+
+
+@router.get("/me", response_model=UserOut)
+async def get_current_user_info(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return await build_user_out_with_usage(db, current_user)
 
 
 @router.post("/change-password", status_code=status.HTTP_204_NO_CONTENT)

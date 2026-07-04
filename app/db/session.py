@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
 
@@ -20,6 +21,15 @@ class Base(DeclarativeBase):
 async def init_db() -> None:
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+
+        # create_all only adds missing tables, not missing columns on tables
+        # that already existed - patch the pre-quota schema in place here
+        # since there's no migration framework in this project.
+        if settings.database_url.startswith("sqlite"):
+            result = await conn.execute(text("PRAGMA table_info(users)"))
+            columns = {row[1] for row in result.fetchall()}
+            if "quota_bytes" not in columns:
+                await conn.execute(text("ALTER TABLE users ADD COLUMN quota_bytes INTEGER"))
 
 
 async def get_db():

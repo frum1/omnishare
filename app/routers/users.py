@@ -9,7 +9,8 @@ from app.core.security import get_current_admin, hash_password
 from app.core.storage import cleanup_empty_parents
 from app.db.models import FileShare, User
 from app.db.session import get_db
-from app.schemas import PasswordResetOut, UserCreate, UserOut
+from app.schemas import PasswordResetOut, QuotaUpdate, UserCreate, UserOut
+from app.services.quota import build_user_out, build_user_out_with_usage, get_usage_by_user
 
 router = APIRouter(prefix="/admin/users", tags=["users"])
 
@@ -32,15 +33,19 @@ async def create_user(
     if existing.scalar_one_or_none() is not None:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="User already exists")
 
+    if payload.quota_bytes is not None and payload.quota_bytes < 0:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="quota_bytes cannot be negative")
+
     user = User(
         username=payload.username,
         hashed_password=hash_password(payload.password),
         is_admin=payload.is_admin,
+        quota_bytes=payload.quota_bytes,
     )
     db.add(user)
     await db.commit()
     await db.refresh(user)
-    return user
+    return build_user_out(user, used_bytes=0)
 
 
 @router.get("", response_model=list[UserOut])
@@ -49,7 +54,27 @@ async def list_users(
     _: User = Depends(get_current_admin),
 ):
     result = await db.execute(select(User).order_by(User.created_at))
-    return result.scalars().all()
+    users = result.scalars().all()
+    usage = await get_usage_by_user(db)
+    return [build_user_out(user, usage.get(user.id, 0)) for user in users]
+
+
+@router.patch("/{user_id}/quota", response_model=UserOut)
+async def update_user_quota(
+    user_id: str,
+    payload: QuotaUpdate,
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(get_current_admin),
+):
+    user = await _get_user_or_404(user_id, db)
+
+    if payload.quota_bytes is not None and payload.quota_bytes < 0:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="quota_bytes cannot be negative")
+
+    user.quota_bytes = payload.quota_bytes
+    await db.commit()
+    await db.refresh(user)
+    return await build_user_out_with_usage(db, user)
 
 
 @router.post("/{user_id}/reset-password", response_model=PasswordResetOut)

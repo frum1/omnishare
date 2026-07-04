@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel
 
 
 class Token(BaseModel):
@@ -12,16 +12,26 @@ class UserCreate(BaseModel):
     username: str
     password: str
     is_admin: bool = True
+    quota_bytes: int | None = None
 
 
 class UserOut(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
     id: str
     username: str
     is_admin: bool
     must_change_password: bool
     created_at: datetime
+    quota_bytes: int | None
+    used_bytes: int
+
+
+class QuotaUpdate(BaseModel):
+    quota_bytes: int | None
+
+
+class UserUsageOut(BaseModel):
+    used_bytes: int
+    quota_bytes: int | None
 
 
 class PasswordResetOut(BaseModel):
@@ -49,6 +59,12 @@ class FileOut(BaseModel):
 
 class FileCaptionUpdate(BaseModel):
     caption: str | None
+
+
+class DiskUsageOut(BaseModel):
+    total_bytes: int
+    used_bytes: int
+    free_bytes: int
 
 
 class NetworkSettingsOut(BaseModel):

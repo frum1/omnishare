@@ -5,13 +5,12 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.core.config import settings
 
-# Static location of the built web app, populated at install time. Kept as a
-# fixed path (not configurable) so the frontend build always lands here.
-WEB_DIST_DIR = Path(__file__).resolve().parent.parent / "dist"
+DIST_DIR = Path(__file__).resolve().parent.parent / "dist"
 from app.db.session import init_db
 from app.routers import auth, download, files, settings as settings_router, users
 from app.services.bootstrap import ensure_root_admin
@@ -52,9 +51,13 @@ app.include_router(download.router)
 async def health():
     return {"status": "ok"}
 
+DIST_DIR.mkdir(parents=True, exist_ok=True)
 
-# Serves the built web app (SPA). Mounted last so it acts as a catch-all
-# fallback and never shadows the API routes registered above. check_dir is off
-# so the app still boots before the frontend build has been fetched.
-WEB_DIST_DIR.mkdir(parents=True, exist_ok=True)
-app.mount("/", StaticFiles(directory=WEB_DIST_DIR, html=True, check_dir=False), name="web")
+app.mount("/assets", StaticFiles(directory=DIST_DIR / "assets"), name="assets")
+
+@app.get("/{full_path:path}")
+async def spa_fallback(full_path: str):
+    candidate = DIST_DIR / full_path
+    if full_path and Path(candidate).is_file():
+        return FileResponse(candidate)
+    return FileResponse(DIST_DIR / "index.html")

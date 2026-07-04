@@ -24,6 +24,8 @@ class User(Base):
     is_admin: Mapped[bool] = mapped_column(Boolean, default=False)
     must_change_password: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(), default=_utcnow)
+    # None means unlimited - the default for every user, admins included.
+    quota_bytes: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     files: Mapped[list["FileShare"]] = relationship(back_populates="owner")
 
