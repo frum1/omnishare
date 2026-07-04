@@ -5,3 +5,4 @@ __pycache__/
 data/
 storage/*
 !storage/.gitkeep
+web/dist/

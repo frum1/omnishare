@@ -25,4 +25,35 @@ it after logging in.
 
 Open `http://localhost:8000/docs` for interactive API docs.
 
+## Docker
+
+```bash
+cp .env.example .env
+# edit .env: PUBLIC_BASE_URL, SECRET_KEY (see inline comments)
+
+docker compose up -d --build
+```
+
+The container uses host networking (Linux) so the "local link" auto-detection
+sees your machine's real LAN IP — no port mapping needed, the service is
+reachable on `LOCAL_PORT` (default 8000) directly. Persistent data lives in
+bind mounts next to the compose file: `data/` (SQLite DB) and `storage/`
+(uploaded files).
+
+Grab the generated admin password from the logs on first boot:
+
+```bash
+docker compose logs omnishare
+```
+
+Lost the admin password? Reset it without touching the database by hand:
+
+```bash
+docker compose exec omnishare python -m scripts.reset_admin_password
+```
+
+**Not on Linux?** Host networking isn't available on Docker Desktop
+(macOS/Windows). See the commented bridge-network block in
+`docker-compose.yml` and set `LOCAL_BASE_URL` explicitly in `.env`.
+
 Copyleft frum1 :)

@@ -1,0 +1,28 @@
+services:
+  omnishare:
+    build: .
+    image: omnishare:latest
+    container_name: omnishare
+    restart: unless-stopped
+
+    # Host networking so the app sees the machine's real LAN IP and the
+    # "local link" auto-detection works. Linux only. The service listens on
+    # LOCAL_PORT (default 8000) directly on the host — no port mapping needed.
+    network_mode: host
+
+    env_file:
+      - .env
+
+    volumes:
+      # SQLite database
+      - ./data:/app/data
+      # Uploaded files
+      - ./storage:/app/storage
+
+    # --- Bridge-network alternative (cross-platform, e.g. macOS/Windows) ---
+    # Remove `network_mode: host` above and uncomment the block below. Then set
+    # LOCAL_BASE_URL in .env explicitly (auto-detection can't see the host IP
+    # from a bridge network).
+    #
+    # ports:
+    #   - "8000:8000"

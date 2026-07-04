@@ -34,7 +34,7 @@ async def change_password(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """The one endpoint (besides download/health) reachable while
+    """The only one endpoint (besides download/health) reachable while
     must_change_password is set - see get_current_active_user."""
     if not payload.new_password:
         raise HTTPException(status_code=400, detail="new_password cannot be empty")

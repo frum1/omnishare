@@ -1,0 +1,21 @@
+# Virtualenv and Python caches
+.venv/
+__pycache__/
+*.pyc
+
+# Local runtime data — must never leak into the image (mounted as volumes)
+data/
+storage/
+web/dist/
+
+# Local config and secrets
+.env
+
+# VCS and editor
+.git/
+.gitignore
+.idea/
+.vscode/
+
+# Docs / meta
+README.md

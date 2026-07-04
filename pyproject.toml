@@ -6,7 +6,7 @@ requires-python = ">=3.12"
 dependencies = [
     "aiofiles==25.1.0",
     "aiosqlite==0.22.1",
-    "bcrypt==5.0.0",
+    "bcrypt==4.2.1",
     "fastapi==0.139.0",
     "passlib[bcrypt]==1.7.4",
     "pydantic-settings==2.14.2",
