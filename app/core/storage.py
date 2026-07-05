@@ -16,6 +16,16 @@ def build_storage_path(file_id: str, created_at: datetime) -> Path:
     return settings.storage_path / date_dir / shard / file_id
 
 
+def build_incomplete_path(upload_id: str) -> Path:
+    """Location of an in-progress TUS upload before finalization.
+
+    Kept flat (not sharded) since the set of concurrent unfinished uploads is
+    small and short-lived; on completion the file is moved into the sharded
+    tree produced by build_storage_path.
+    """
+    return settings.incomplete_path / upload_id
+
+
 def cleanup_empty_parents(path: Path) -> None:
     """Removes parent directories (shard/day/month/year) left empty after a
     file is deleted, without touching storage_path itself."""

@@ -14,7 +14,7 @@ DIST_DIR = Path(__file__).resolve().parent.parent / "dist"
 from app.db.session import init_db
 from app.routers import auth, download, files, settings as settings_router, users
 from app.services.bootstrap import ensure_root_admin
-from app.services.cleanup import purge_expired_files
+from app.services.cleanup import purge_expired_files, purge_stale_uploads
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
@@ -25,6 +25,7 @@ async def _cleanup_loop():
         # POST /admin/settings take effect without restarting the service
         await asyncio.sleep(settings.cleanup_interval_minutes * 60)
         await purge_expired_files()
+        await purge_stale_uploads()
 
 
 @asynccontextmanager

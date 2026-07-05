@@ -57,10 +57,6 @@ class FileOut(BaseModel):
     local_url: str
 
 
-class FileCaptionUpdate(BaseModel):
-    caption: str | None
-
-
 class DiskUsageOut(BaseModel):
     total_bytes: int
     used_bytes: int

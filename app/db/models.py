@@ -47,3 +47,27 @@ class FileShare(Base):
     download_count: Mapped[int] = mapped_column(Integer, default=0)
 
     owner: Mapped["User"] = relationship(back_populates="files")
+
+
+class TusUpload(Base):
+    """Metadata for a resumable (TUS) upload in progress.
+
+    The current offset is not stored here - it is always read from the size of
+    the on-disk partial file, which stays authoritative across restarts. This
+    row only carries what is needed to create the FileShare once the transfer
+    completes, plus an expiry so abandoned uploads can be swept.
+    """
+
+    __tablename__ = "tus_uploads"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_uuid)
+    owner_id: Mapped[str] = mapped_column(ForeignKey("users.id"))
+    original_filename: Mapped[str] = mapped_column(String(255))
+    content_type: Mapped[str] = mapped_column(String(255), default="application/octet-stream")
+    upload_length: Mapped[int] = mapped_column(Integer)
+    caption: Mapped[str | None] = mapped_column(Text(), nullable=True)
+    ttl_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    max_downloads: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(), default=_utcnow)
+    expires_at: Mapped[datetime] = mapped_column(DateTime())

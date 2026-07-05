@@ -21,6 +21,8 @@ class Settings(BaseSettings):
     upload_chunk_size_kb: int = 1024
 
     cleanup_interval_minutes: int = 30
+    # Resumable (TUS) uploads that never finish are dropped after this window.
+    incomplete_upload_ttl_hours: int = 24
 
     @property
     def max_file_size_bytes(self) -> int:
@@ -33,6 +35,14 @@ class Settings(BaseSettings):
     @property
     def storage_path(self) -> Path:
         path = Path(self.storage_dir)
+        path.mkdir(parents=True, exist_ok=True)
+        return path
+
+    @property
+    def incomplete_path(self) -> Path:
+        """Flat directory holding partially-uploaded TUS files until they are
+        finalized and moved into the sharded storage tree."""
+        path = self.storage_path / "incomplete"
         path.mkdir(parents=True, exist_ok=True)
         return path
 
