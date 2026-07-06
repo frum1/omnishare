@@ -39,7 +39,14 @@ async def lifespan(app: FastAPI):
         await task
 
 
-app = FastAPI(title="OmniShare", version="0.1.0", lifespan=lifespan)
+app = FastAPI(
+    title="OmniShare",
+    version="0.1.0",
+    lifespan=lifespan,
+    docs_url=None,
+    redoc_url=None,
+    openapi_url=None,
+)
 
 app.include_router(auth.router)
 app.include_router(users.router)

@@ -38,7 +38,10 @@ def get_local_base_url() -> str:
 
 
 def build_share_urls(file_id: str) -> dict:
-    public_base = apply_port(settings.public_base_url, settings.local_port)
+    # Unlike the local link, the public URL is never auto-ported: it's
+    # reached through a domain (typically behind a reverse proxy on
+    # 80/443), so gluing on the app's internal LOCAL_PORT would break it.
+    public_base = settings.public_base_url.rstrip("/")
     return {
         "public_url": f"{public_base}/f/{file_id}",
         "local_url": f"{get_local_base_url()}/f/{file_id}",

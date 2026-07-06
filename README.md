@@ -23,7 +23,9 @@ On first boot the server creates a root `admin` account automatically and
 prints its generated password to the console — grab it from there and change
 it after logging in.
 
-Open `http://localhost:8000/docs` for interactive API docs.
+Swagger/ReDoc are disabled by default (reduces attack surface on a
+publicly-exposed instance). For local API exploration, temporarily set
+`docs_url`/`redoc_url`/`openapi_url` back in `app/main.py`'s `FastAPI(...)` call.
 
 ## Docker
 
