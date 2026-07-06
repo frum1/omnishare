@@ -1,6 +1,6 @@
 import base64
 import shutil
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response, status
@@ -13,14 +13,28 @@ from app.core.security import get_current_active_user, get_current_admin
 from app.core.storage import build_incomplete_path, build_storage_path, cleanup_empty_parents
 from app.db.models import FileShare, TusUpload, User
 from app.db.session import get_db
-from app.schemas import DiskUsageOut, FileOut, UserUsageOut
+from app.schemas import DiskUsageOut, FileInfoUpdate, FileOut, UserUsageOut
 from app.services.quota import get_usage_bytes
-from app.services.uploads import build_file_share, get_quota_remaining, normalize_caption
+from app.services.uploads import (
+    build_file_share,
+    get_quota_remaining,
+    normalize_caption,
+    normalize_max_downloads,
+)
 
 TUS_VERSION = "1.0.0"
 PATCH_CONTENT_TYPE = "application/offset+octet-stream"
 
 router = APIRouter(prefix="/api/files", tags=["files"])
+
+
+def _to_naive_utc(dt: datetime | None) -> datetime | None:
+    """Normalize an incoming datetime to naive UTC so it lines up with the
+    naive ``datetime.utcnow()`` timestamps the rest of the app stores and
+    compares against (e.g. the expiry cleanup)."""
+    if dt is not None and dt.tzinfo is not None:
+        dt = dt.astimezone(timezone.utc).replace(tzinfo=None)
+    return dt
 
 
 def _file_out(file_share: FileShare) -> FileOut:
@@ -346,6 +360,38 @@ async def get_file_info(
     return _file_out(file_share)
 
 
+@router.patch("/{file_id}/info", status_code=status.HTTP_204_NO_CONTENT)
+async def update_file_info(
+    file_id: str,
+    payload: FileInfoUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+) -> Response:
+    """Update the share settings (caption / expiry / download limit) of a
+    finished file.
+
+    Only the fields present in the body are touched, so changing one leaves the
+    others as-is. Responds 204 on success.
+    """
+    result = await db.execute(select(FileShare).where(FileShare.id == file_id))
+    file_share = result.scalar_one_or_none()
+    if file_share is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found")
+    if file_share.owner_id != current_user.id and not current_user.is_admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You don't have access to this file")
+
+    fields = payload.model_fields_set
+    if "caption" in fields:
+        file_share.caption = normalize_caption(payload.caption)
+    if "expires_at" in fields:
+        file_share.expires_at = _to_naive_utc(payload.expires_at)
+    if "max_downloads" in fields:
+        file_share.max_downloads = normalize_max_downloads(payload.max_downloads)
+
+    await db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
 # --------------------------------------------------------------------------- #
 # Item URL: serves both the in-progress upload and the finished file
 # --------------------------------------------------------------------------- #
@@ -409,6 +455,8 @@ async def patch_file(
 
     * ``application/offset+octet-stream`` -> TUS append (in-progress upload)
     * anything else (JSON) -> update the caption of a finished file
+
+    Expiry / download-limit changes live on ``PATCH /{file_id}/info``.
     """
     if content_type == PATCH_CONTENT_TYPE:
         return await _append_chunk(file_id, request, upload_offset, db, current_user)

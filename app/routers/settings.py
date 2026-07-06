@@ -2,11 +2,14 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from app.core.config import settings
 from app.core.env_file import update_env_file
-from app.core.security import get_current_admin
+from app.core.security import get_current_active_user, get_current_admin
 from app.db.models import User
 from app.schemas import NetworkSettingsOut, NetworkSettingsUpdate
 
 router = APIRouter(prefix="/admin/settings", tags=["settings"])
+
+# Endpoints any authenticated user may reach (not just admins).
+public_router = APIRouter(prefix="/api", tags=["settings"])
 
 
 def _current() -> NetworkSettingsOut:
@@ -14,9 +17,16 @@ def _current() -> NetworkSettingsOut:
         public_base_url=settings.public_base_url,
         local_base_url=settings.local_base_url,
         local_port=settings.local_port,
+        local_mode=settings.local_mode,
         max_file_size_mb=settings.max_file_size_mb,
         cleanup_interval_minutes=settings.cleanup_interval_minutes,
     )
+
+
+@public_router.get("/local-mode-available", response_model=bool)
+async def local_mode_available(_: User = Depends(get_current_active_user)) -> bool:
+    """Whether local-network share links are enabled, for the current user."""
+    return settings.local_mode
 
 
 @router.get("", response_model=NetworkSettingsOut)

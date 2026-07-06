@@ -1,0 +1,62 @@
+name: Build and Publish Image
+
+# Publishes a container image to GHCR on every `v*` tag push. The image is
+# tagged with the full version, the major.minor line, and `latest`.
+on:
+  push:
+    tags:
+      - "v*"
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract image metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # The git tag busts the frontend fetch layer so each release re-pulls
+          # the current latest frontend release.
+          build-args: |
+            CACHEBUST=${{ github.ref_name }}
+          # Optional: authorizes the frontend release download while
+          # omnishare_frontend is still private. Set the FRONTEND_TOKEN repo
+          # secret to a PAT/fine-grained token with read access to it. Once the
+          # frontend repo is public this can be removed — an empty secret makes
+          # the build fall back to an unauthenticated download.
+          secrets: |
+            frontend_token=${{ secrets.FRONTEND_TOKEN }}

@@ -9,6 +9,8 @@ class Settings(BaseSettings):
     public_base_url: str = "http://localhost:8000"
     local_base_url: str = ""
     local_port: int = 8000
+    # When enabled, clients on the local network may use the local share links.
+    local_mode: bool = False
 
     secret_key: str = "changeme"
     access_token_expire_minutes: int = 60 * 24

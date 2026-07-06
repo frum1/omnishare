@@ -57,6 +57,16 @@ class FileOut(BaseModel):
     local_url: str
 
 
+class FileInfoUpdate(BaseModel):
+    """Partial update of an existing file's share settings. Only the fields
+    actually present in the request body are applied, so omitting one leaves it
+    unchanged (whereas sending it as ``null`` clears it — no expiry / no limit)."""
+
+    caption: str | None = None
+    expires_at: datetime | None = None
+    max_downloads: int | None = None
+
+
 class DiskUsageOut(BaseModel):
     total_bytes: int
     used_bytes: int
@@ -67,6 +77,7 @@ class NetworkSettingsOut(BaseModel):
     public_base_url: str
     local_base_url: str
     local_port: int
+    local_mode: bool
     max_file_size_mb: int
     cleanup_interval_minutes: int
 
@@ -75,5 +86,6 @@ class NetworkSettingsUpdate(BaseModel):
     public_base_url: str | None = None
     local_base_url: str | None = None
     local_port: int | None = None
+    local_mode: bool | None = None
     max_file_size_mb: int | None = None
     cleanup_interval_minutes: int | None = None

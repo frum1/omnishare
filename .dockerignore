@@ -8,6 +8,10 @@ data/
 storage/
 web/dist/
 
+# Frontend is fetched fresh from a release during the build, never copied
+# from the local tree.
+dist/
+
 # Local config and secrets
 .env
 
