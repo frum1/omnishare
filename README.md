@@ -57,3 +57,4 @@ docker compose exec omnishare python -m scripts.reset_admin_password
 `docker-compose.yml` and set `LOCAL_BASE_URL` explicitly in `.env`.
 
 Copyleft frum1 :)
+2026-20xx
