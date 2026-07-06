@@ -1,9 +1,16 @@
 services:
   omnishare:
-    build: .
-    image: omnishare:latest
+    # Pulls the published image. While the repo is still private, run
+    # `docker login ghcr.io` first (e.g. with a PAT that has read:packages).
+    image: ghcr.io/frum1/omnishare:latest
     container_name: omnishare
     restart: unless-stopped
+
+    # --- Build from source instead (dev/local iteration) ---
+    # Comment out `image:` above and uncomment this. Needs the
+    # `frontend_token` build secret while omnishare_frontend is private —
+    # see Dockerfile.
+    # build: .
 
     # Host networking so the app sees the machine's real LAN IP and the
     # "local link" auto-detection works. Linux only. The service listens on
