@@ -20,6 +20,8 @@ def update_env_file(updates: dict[str, str], env_path: Path = ENV_PATH) -> None:
     for key, value in remaining.items():
         new_lines.append(f"{key}={value}")
 
-    tmp_path = env_path.with_name(env_path.name + ".tmp")
-    tmp_path.write_text("\n".join(new_lines) + "\n")
-    tmp_path.replace(env_path)
+    # Written in place rather than write-tmp-then-rename: in Docker .env is
+    # typically bind-mounted as a single file, which is itself a mount point,
+    # so renaming another file onto it fails with EBUSY ("device or resource
+    # busy"). A plain in-place write has no such restriction.
+    env_path.write_text("\n".join(new_lines) + "\n")
