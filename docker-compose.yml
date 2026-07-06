@@ -17,10 +17,13 @@ services:
     # LOCAL_PORT (default 8000) directly on the host — no port mapping needed.
     network_mode: host
 
-    env_file:
-      - .env
-
+    # NOT env_file: that only copies values into the container's environment
+    # once at startup. The app rewrites its own runtime settings back into
+    # .env (POST /admin/settings), so .env must be the *same file* as the
+    # host's, or those changes vanish on the next container recreate (image
+    # update, `down`+`up`, etc.) instead of surviving on disk.
     volumes:
+      - ./.env:/app/.env
       # SQLite database
       - ./data:/app/data
       # Uploaded files
@@ -33,3 +36,29 @@ services:
     #
     # ports:
     #   - "8000:8000"
+
+  # Reverse proxy with automatic HTTPS (Let's Encrypt via Caddy). Opt-in:
+  # only starts with `docker compose --profile proxy up -d`. Requires DOMAIN
+  # set in .env and DNS/port-forwarding pointed at this server — see
+  # Caddyfile and the README's "Public HTTPS" section.
+  caddy:
+    image: caddy:2-alpine
+    container_name: omnishare-caddy
+    restart: unless-stopped
+    profiles: ["proxy"]
+
+    # Host networking so Caddy can bind 80/443 directly and reach omnishare
+    # (also on host networking, see above) via localhost.
+    network_mode: host
+
+    env_file:
+      - .env
+
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:

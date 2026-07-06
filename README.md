@@ -31,14 +31,16 @@ Open `http://localhost:8000/docs` for interactive API docs.
 cp .env.example .env
 # edit .env: PUBLIC_BASE_URL, SECRET_KEY (see inline comments)
 
-docker compose up -d --build
+docker compose up -d
 ```
 
 The container uses host networking (Linux) so the "local link" auto-detection
 sees your machine's real LAN IP — no port mapping needed, the service is
 reachable on `LOCAL_PORT` (default 8000) directly. Persistent data lives in
-bind mounts next to the compose file: `data/` (SQLite DB) and `storage/`
-(uploaded files).
+bind mounts next to the compose file: `data/` (SQLite DB), `storage/`
+(uploaded files), and `.env` itself — settings changed via the admin panel
+are written back into it, so it's bind-mounted (not just passed as
+`env_file:`) to survive container recreation.
 
 Grab the generated admin password from the logs on first boot:
 
@@ -55,6 +57,33 @@ docker compose exec omnishare python -m scripts.reset_admin_password
 **Not on Linux?** Host networking isn't available on Docker Desktop
 (macOS/Windows). See the commented bridge-network block in
 `docker-compose.yml` and set `LOCAL_BASE_URL` explicitly in `.env`.
+
+## Public HTTPS (domain + certificate)
+
+To expose OmniShare on the internet under your own domain with a trusted
+certificate, run the bundled Caddy reverse proxy — it obtains and renews a
+Let's Encrypt certificate automatically, no certbot or manual renewal.
+
+Prerequisites:
+
+- A domain (or subdomain) with DNS pointed at this server's public IP.
+- Ports **80** and **443** forwarded to this machine on your router/firewall
+  (80 is required for the ACME challenge, not just for redirects).
+
+Setup:
+
+```bash
+# in .env:
+# DOMAIN=share.example.com
+# PUBLIC_BASE_URL=https://share.example.com
+
+docker compose --profile proxy up -d
+```
+
+That starts `omnishare` plus a `caddy` container reading `Caddyfile`, which
+proxies `https://$DOMAIN` to the app and handles the certificate. Without
+`--profile proxy`, Caddy is skipped entirely and the previous plain-HTTP setup
+is unchanged.
 
 Copyleft frum1 :)
 2026-20xx
