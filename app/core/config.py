@@ -1,5 +1,7 @@
+import secrets
 from pathlib import Path
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -14,7 +16,10 @@ class Settings(BaseSettings):
     # When enabled, clients on the local network may use the local share links.
     local_mode: bool = False
 
-    secret_key: str = "changeme"
+    # Left empty to auto-generate: a random key is created on first boot and
+    # persisted (see _resolve_secret_key). Set it explicitly only to pin a key
+    # across separate instances that must share JWTs.
+    secret_key: str = ""
     access_token_expire_minutes: int = 60 * 24
     jwt_algorithm: str = "HS256"
 
@@ -49,6 +54,26 @@ class Settings(BaseSettings):
         path = self.storage_path / "incomplete"
         path.mkdir(parents=True, exist_ok=True)
         return path
+
+    @model_validator(mode="after")
+    def _resolve_secret_key(self) -> "Settings":
+        """Ensure a stable JWT signing key without a manual setup step.
+
+        An explicit SECRET_KEY (from env/.env) always wins. Otherwise a random
+        key is generated once and persisted to data/secret_key so it survives
+        restarts — invalidating it would log everyone out on every reboot.
+        """
+        if self.secret_key and self.secret_key != "changeme":
+            return self
+        key_path = Path("data") / "secret_key"
+        key_path.parent.mkdir(parents=True, exist_ok=True)
+        if key_path.exists():
+            self.secret_key = key_path.read_text().strip()
+        else:
+            self.secret_key = secrets.token_hex(32)
+            key_path.write_text(self.secret_key + "\n")
+            key_path.chmod(0o600)
+        return self
 
 
 settings = Settings()

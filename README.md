@@ -31,18 +31,22 @@ publicly-exposed instance). For local API exploration, temporarily set
 
 ```bash
 cp .env.example .env
-# edit .env: PUBLIC_BASE_URL, SECRET_KEY (see inline comments)
+# edit .env: set PUBLIC_BASE_URL (everything else has sane defaults)
 
 docker compose up -d
 ```
 
+That's the whole setup for a LAN / plain-HTTP deployment — no secret to
+generate (a random `SECRET_KEY` is created and persisted on first boot) and no
+extra files to manage.
+
 The container uses host networking (Linux) so the "local link" auto-detection
 sees your machine's real LAN IP — no port mapping needed, the service is
-reachable on `LOCAL_PORT` (default 8000) directly. Persistent data lives in
-bind mounts next to the compose file: `data/` (SQLite DB), `storage/`
-(uploaded files), and `.env` itself — settings changed via the admin panel
-are written back into it, so it's bind-mounted (not just passed as
-`env_file:`) to survive container recreation.
+reachable on `LOCAL_PORT` (default 8010) directly. Persistent data lives in
+bind mounts next to the compose file: `data/` (SQLite DB + auto-generated
+`secret_key`), `storage/` (uploaded files), and `.env` itself — settings
+changed via the admin panel are written back into it, so it's bind-mounted
+(not just passed as `env_file:`) to survive container recreation.
 
 Grab the generated admin password from the logs on first boot:
 
@@ -72,20 +76,20 @@ Prerequisites:
 - Ports **80** and **443** forwarded to this machine on your router/firewall
   (80 is required for the ACME challenge, not just for redirects).
 
-Setup:
+Setup — two lines in `.env`, then the same `up`:
 
 ```bash
 # in .env:
-# DOMAIN=share.example.com
 # PUBLIC_BASE_URL=https://share.example.com
+# COMPOSE_PROFILES=proxy
 
-docker compose --profile proxy up -d
+docker compose up -d
 ```
 
-That starts `omnishare` plus a `caddy` container reading `Caddyfile`, which
-proxies `https://$DOMAIN` to the app and handles the certificate. Without
-`--profile proxy`, Caddy is skipped entirely and the previous plain-HTTP setup
-is unchanged.
+`COMPOSE_PROFILES=proxy` brings up a `caddy` container alongside `omnishare`;
+its config is inlined in `docker-compose.yml` and uses `PUBLIC_BASE_URL` as the
+site address, so Caddy proxies to the app and obtains/renews the certificate on
+its own. Remove that line for a plain-HTTP / LAN-only setup.
 
 Copyleft frum1 :)
 2026-20xx

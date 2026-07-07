@@ -1,63 +1,49 @@
 services:
   omnishare:
-    # Pulls the published image. While the repo is still private, run
-    # `docker login ghcr.io` first (e.g. with a PAT that has read:packages).
     image: ghcr.io/frum1/omnishare:latest
     container_name: omnishare
     restart: unless-stopped
 
     # --- Build from source instead (dev/local iteration) ---
-    # Comment out `image:` above and uncomment this. Needs the
-    # `frontend_token` build secret while omnishare_frontend is private —
-    # see Dockerfile.
     # build: .
 
-    # Host networking so the app sees the machine's real LAN IP and the
-    # "local link" auto-detection works. Linux only. The service listens on
-    # LOCAL_PORT (default 8000) directly on the host — no port mapping needed.
+    # The service listens on LOCAL_PORT (default 8000) directly
+    # on the host — no port mapping needed.
     network_mode: host
 
-    # NOT env_file: that only copies values into the container's environment
-    # once at startup. The app rewrites its own runtime settings back into
-    # .env (POST /admin/settings), so .env must be the *same file* as the
-    # host's, or those changes vanish on the next container recreate (image
-    # update, `down`+`up`, etc.) instead of surviving on disk.
     volumes:
       - ./.env:/app/.env
       # SQLite database
       - ./data:/app/data
       # Uploaded files
+      # If you want to use a different storage location, change this
       - ./storage:/app/storage
 
-    # --- Bridge-network alternative (cross-platform, e.g. macOS/Windows) ---
-    # Remove `network_mode: host` above and uncomment the block below. Then set
-    # LOCAL_BASE_URL in .env explicitly (auto-detection can't see the host IP
-    # from a bridge network).
-    #
-    # ports:
-    #   - "8000:8000"
-
-  # Reverse proxy with automatic HTTPS (Let's Encrypt via Caddy). Opt-in:
-  # only starts with `docker compose --profile proxy up -d`. Requires DOMAIN
-  # set in .env and DNS/port-forwarding pointed at this server — see
-  # Caddyfile and the README's "Public HTTPS" section.
+  # Reverse proxy with automatic HTTPS (Let's Encrypt via Caddy). Opt-in via
+  # `COMPOSE_PROFILES=proxy` in .env. Needs port-forwarding for PUBLIC_BASE_URL pointed at
+  # this server — see README's "Public HTTPS" section.
   caddy:
     image: caddy:2-alpine
     container_name: omnishare-caddy
     restart: unless-stopped
     profiles: ["proxy"]
 
-    # Host networking so Caddy can bind 80/443 directly and reach omnishare
-    # (also on host networking, see above) via localhost.
     network_mode: host
 
-    env_file:
-      - .env
+    configs:
+      - source: caddyfile
+        target: /etc/caddy/Caddyfile
 
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
+
+configs:
+  caddyfile:
+    content: |
+      ${PUBLIC_BASE_URL} {
+        reverse_proxy localhost:${LOCAL_PORT:-8000}
+      }
 
 volumes:
   caddy_data:
