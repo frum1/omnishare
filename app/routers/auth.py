@@ -9,7 +9,7 @@ from app.db.session import get_db
 from app.schemas import ChangePasswordIn, Token, UserOut
 from app.services.quota import build_user_out_with_usage
 
-router = APIRouter(prefix="/auth", tags=["auth"])
+router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 
 @router.post("/login", response_model=Token)

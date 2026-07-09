@@ -12,7 +12,7 @@ from app.db.models import User
 from app.db.session import get_db
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
 
 def hash_password(password: str) -> str:
@@ -56,7 +56,7 @@ async def get_current_user(
 async def get_current_active_user(user: User = Depends(get_current_user)) -> User:
     """Blocks access until a pending forced password change is completed.
 
-    Used everywhere except /auth/change-password (and the public download
+    Used everywhere except /api/auth/change-password (and the public download
     and health endpoints, which don't depend on auth at all).
     """
     if user.must_change_password:

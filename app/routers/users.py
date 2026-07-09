@@ -12,7 +12,7 @@ from app.db.session import get_db
 from app.schemas import PasswordResetOut, QuotaUpdate, UserCreate, UserOut
 from app.services.quota import build_user_out, build_user_out_with_usage, get_usage_by_user
 
-router = APIRouter(prefix="/admin/users", tags=["users"])
+router = APIRouter(prefix="/api/admin/users", tags=["users"])
 
 
 async def _get_user_or_404(user_id: str, db: AsyncSession) -> User:

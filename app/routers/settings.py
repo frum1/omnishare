@@ -6,7 +6,7 @@ from app.core.security import get_current_active_user, get_current_admin
 from app.db.models import User
 from app.schemas import NetworkSettingsOut, NetworkSettingsUpdate
 
-router = APIRouter(prefix="/admin/settings", tags=["settings"])
+router = APIRouter(prefix="/api/admin/settings", tags=["settings"])
 
 # Endpoints any authenticated user may reach (not just admins).
 public_router = APIRouter(prefix="/api", tags=["settings"])
