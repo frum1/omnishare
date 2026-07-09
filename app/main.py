@@ -11,6 +11,8 @@ from fastapi.staticfiles import StaticFiles
 from app.core.config import settings
 
 DIST_DIR = Path(__file__).resolve().parent.parent / "dist"
+ROOT_DIR = Path(__file__).resolve().parent.parent
+DEV_MODE = (ROOT_DIR / ".dev-mode").exists()
 from app.db.session import init_db
 from app.routers import auth, download, files, settings as settings_router, users
 from app.services.bootstrap import ensure_root_admin
@@ -43,9 +45,9 @@ app = FastAPI(
     title="OmniShare",
     version="0.1.0",
     lifespan=lifespan,
-    docs_url=None,
-    redoc_url=None,
-    openapi_url=None,
+    docs_url="/docs" if DEV_MODE else None,
+    redoc_url="/redoc" if DEV_MODE else None,
+    openapi_url="/openapi.json" if DEV_MODE else None,
 )
 
 app.include_router(auth.router)
